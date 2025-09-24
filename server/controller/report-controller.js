@@ -2,11 +2,19 @@ const Report = require("../model/report-Model")
 const User = require("../model/user-Model") // Added User model import
 const cloudinary = require("../config/cloudinary")
 const fs = require("fs")
+const sendEmail = require("../utils/sendEmail")
 
 const createReport = async (req, res) => {
   try {
     const { category, description, location, latitude, longitude, urgencylevel, district } = req.body
     const userId = req.userInfo.id // From auth middleware
+    const fullname = req.userInfo.fullname
+    const email = req.userInfo.email
+    const phone = req.userInfo.phone
+    const verificationMethod = req.body.verificationMethod || "email"
+
+  
+
 
     // Validate required fields
     if (!category || !location || !urgencylevel) {
@@ -119,7 +127,7 @@ const createReport = async (req, res) => {
       department: reportData.department || "will be auto-assigned",
     })
 
-    // Create and save report (department will be auto-assigned by pre-save middleware)
+    // Create and save report department will be auto-assigned by pre-save middleware
     const newReport = new Report(reportData)
     await newReport.save()
 
@@ -179,7 +187,15 @@ const createReport = async (req, res) => {
     await newReport.populate("reportedBy", "fullname email phone District")
     await newReport.populate("assignedTo", "fullname email department")
 
-    res.status(201).json({
+    const reportId = newReport._id
+    const department = newReport.department
+    const status = newReport.status
+    const submittedAt = newReport.createdAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+    const DepartmentDistrict =  newReport.district
+   
+    sendreport(verificationMethod , fullname , reportId, department, DepartmentDistrict, status, submittedAt  , email , phone )
+
+           res.status(201).json({
       success: true,
       message: `Report filed successfully and automatically routed to ${newReport.department} department`,
       data: {
@@ -218,6 +234,152 @@ const createReport = async (req, res) => {
       error: error.message,
     })
   }
+}
+async function sendreport(verificationMethod , fullname , reportId, department, district, status, submittedAt  , email){
+   
+    try {
+        if(verificationMethod==="email"){
+            const message = generateEmailTemplate(fullname , reportId, department, district, status, submittedAt)
+            sendEmail({email , subject:"Your report" , message})
+     
+
+        } 
+        // else (verificationMethod === "text_message") {
+            
+        //     await client.messages.create({
+        //       body: `Your verification code is ${fullname , reportId, department, district, status, submittedAt}.`,
+        //       from: process.env.TWILIO_PHONE_NUMBER,
+        //       to: phone,
+        //     });
+        // }
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            success:false,
+            message:"fail to send email",
+            error:error.message
+        })
+    }
+    
+}
+
+async function sendtoWorker(workerName, reportId, department, district, citizenName, citizenContact, issueDescription, submittedAt, districtHelpline, workerEmail) {
+   
+    try {
+            const message = generateEmailTemplateforworker(workerName, reportId, department, district, citizenName, citizenContact, issueDescription, submittedAt, districtHelpline)
+            sendEmail({email: workerEmail , subject:"New Assignment" , message})
+     
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            success:false,
+            message:"fail to send email to worker",
+            error:error.message
+        })
+    }
+}
+
+function generateEmailTemplate(fullname , reportId, department, district, status, submittedAt) {
+  return `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+    <h2 style="color: #0B5ED7; text-align: center;">Jharkhand Civic Portal - Report Received</h2>
+    
+    <p style="font-size: 16px; color: #333;">Dear ${fullname},</p>
+    
+    <p style="font-size: 16px; color: #333;">
+      Thank you for reporting the issue. Your report has been successfully submitted and forwarded to the <strong>${department}</strong> in <strong>${district}</strong>.
+    </p>
+
+    <div style="margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 6px; background-color: #fff;">
+      <p style="margin: 6px 0; font-size: 15px; color: #555;">
+        <strong>Report ID:</strong> ${reportId}
+      </p>
+      <p style="margin: 6px 0; font-size: 15px; color: #555;">
+        <strong>Submitted:</strong> ${submittedAt}
+      </p>
+      <p style="margin: 6px 0; font-size: 15px; color: #555;">
+        <strong>Status:</strong> ${status}
+      </p>
+      <p style="margin: 6px 0; font-size: 15px; color: #555;">
+        <strong>Expected Response By:</strong> Within 72 hours
+      </p>
+    </div>
+
+    <p style="font-size: 16px; color: #333;">
+      You can track the progress of your report anytime by clicking the button below:
+    </p>
+
+    <div style="text-align: center; margin: 20px 0;">
+      <a " 
+         style="display: inline-block; padding: 12px 24px; background-color: #0B5ED7; color: #fff; text-decoration: none; font-size: 16px; border-radius: 5px;">
+        View Report
+      </a>
+    </div>
+
+
+    <footer style="margin-top: 20px; text-align: center; font-size: 14px; color: #999;">
+      <p>Thank you,<br>Jharkhand Civic Portal Team</p>
+      <p style="font-size: 12px; color: #aaa;">This is an automated message. Please do not reply to this email.</p>
+    </footer>
+  </div>
+`;
+
+}
+
+function generateEmailTemplateforworker(workerName, reportId, department, district, citizenName, citizenContact, issueDescription, submittedAt, districtHelpline) {
+    return `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+    <h2 style="color: #0B5ED7; text-align: center;">Jharkhand Civic Portal - New Assignment</h2>
+    
+    <p style="font-size: 16px; color: #333;">Dear ${workerName},</p>
+    
+    <p style="font-size: 16px; color: #333;">
+      You have been <strong>assigned</strong> a new civic issue report. Please review the details below and take the necessary action.
+    </p>
+
+    <div style="margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 6px; background-color: #fff;">
+      <p style="margin: 6px 0; font-size: 15px; color: #555;">
+        <strong>Report ID:</strong> ${reportId}
+      </p>
+      <p style="margin: 6px 0; font-size: 15px; color: #555;">
+        <strong>Department:</strong> ${department}
+      </p>
+      <p style="margin: 6px 0; font-size: 15px; color: #555;">
+        <strong>District:</strong> ${district}
+      </p>
+      <p style="margin: 6px 0; font-size: 15px; color: #555;">
+        <strong>Issue Description:</strong><br>
+        ${issueDescription}
+      </p>
+      <p style="margin: 6px 0; font-size: 15px; color: #555;">
+        <strong>Submitted On:</strong> ${submittedAt}
+      </p>
+    </div>
+
+    <p style="font-size: 16px; color: #333;">
+      Please log in to the worker portal to update the status and mark progress:
+    </p>
+
+    <div style="text-align: center; margin: 20px 0;">
+      <a href="https://worker.jharkhand.gov.in/assignments/${reportId}" 
+         style="display: inline-block; padding: 12px 24px; background-color: #0B5ED7; color: #fff; text-decoration: none; font-size: 16px; border-radius: 5px;">
+        View Assignment
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #555;">
+      Ensure timely updates so that the citizen stays informed about the progress.  
+      For support, contact your supervisor or the district control room: <strong>${districtHelpline}</strong>.
+    </p>
+
+    <footer style="margin-top: 20px; text-align: center; font-size: 14px; color: #999;">
+      <p>Thank you,<br>Jharkhand Civic Portal Admin</p>
+      <p style="font-size: 12px; color: #aaa;">This is an automated assignment notification. Please do not reply to this email.</p>
+    </footer>
+  </div>
+`;
+
 }
 
 const getUserReports = async (req, res) => {
@@ -379,13 +541,13 @@ const getAllReportsForAdmin = async (req, res) => {
     // Build filter based on user role
     const filter = {}
 
-    if (req.user.role === "department-admin") {
-      filter.department = req.user.department
-      if (req.user.assignedDistrict) {
-        filter.district = req.user.assignedDistrict
+    if (req.userInfo.role === "department-admin") {
+      filter.department = req.userInfo.department
+      if (req.userInfo.assignedDistrict) {
+        filter.district = req.userInfo.assignedDistrict
       }
-    } else if (req.user.role === "district-admin") {
-      filter.district = req.user.assignedDistrict
+    } else if (req.userInfo.role === "district-admin") {
+      filter.district = req.userInfo.assignedDistrict
     }
     // state-admin can see all reports (no additional filters)
 

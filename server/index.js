@@ -9,6 +9,7 @@ const fs = require("fs")
 const multer = require("multer") 
 const removedUnverifiedData = require("./authomation/removedUnverifiedData")
 const stateAdminRouter = require("./routes/state-admin-router")
+const departmentRouter = require("./routes/department-router")
 
 const app = express()
 
@@ -34,6 +35,7 @@ app.use("/uploads", express.static("uploads"))
 app.use("/api/v1/auth", userRouter)
 app.use("/api/v1/reports", reportRouter) 
 app.use("/api/v1/state-admin", stateAdminRouter)
+app.use("/api/v1/department", departmentRouter) 
 
 app.get("/health", (req, res) => {
   res.status(200).json({

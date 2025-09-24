@@ -70,7 +70,6 @@ const registration = async (req, res) => {
     password: hashPassword,
   });
   await newUser.save();
-  console.log(newUser);
 
   //otp generation
   const verificationcode = Math.floor(100000 + Math.random() * 900000);
@@ -295,6 +294,7 @@ const login = async (req, res) => {
                 role:user.role,
                 fullname:user.fullname,
                 fathername:user.fathername,
+                department:user.department,
                 dateOfBirth:user.dateOfBirth,
                 email:user.email,
                 phone:user.phone,

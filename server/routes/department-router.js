@@ -10,6 +10,7 @@ const {
   assignWorkerToReport,
   getWorkerWorkload,
 } = require("../controller/department-controller")
+const authMiddleware = require("../middleware/auth-middleware")
 
 // Department admin routes
 router.use(anyAdminMiddleware)
@@ -22,7 +23,7 @@ router.get("/workers", departmentAdminMiddleware, getDepartmentWorkers)
 router.get("/workers/available", departmentAdminMiddleware, getAvailableWorkers)
 
 // Assign worker to a specific report
-router.post("/reports/:reportId/assign-worker", departmentAdminMiddleware, assignWorkerToReport)
+router.post("/reports/:reportId/assign-worker",authMiddleware, departmentAdminMiddleware, assignWorkerToReport)
 
 // Get specific worker's workload and performance
 router.get("/workers/:workerId/workload", getWorkerWorkload)

@@ -6,3 +6,5 @@ coverage
 dist
 .env
 .env.local
+.png
+seed.js

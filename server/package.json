@@ -1,0 +1,31 @@
+{
+  "name": "sih-server",
+  "version": "1.0.0",
+  "description": "Server for SIH project",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "author": "code reapers",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.7.0",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.1",
+    "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.6",
+    "twilio": "^5.10.3",
+    "validator": "^13.15.15"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
